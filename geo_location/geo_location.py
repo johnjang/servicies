@@ -28,13 +28,25 @@ def write_log(fn, line):
 
 def parse_line(line):
     result = match_ok.match(line)
-    if result:
-        print(result.group(1))
-        print(result.group(2))
-        print(result.group(3))
 
-    
-    
+    if result:
+        if len(result.groups()) == 3:
+            resp = requests.get('https://ipinfo.io/{}'.format(result.group(1))).json()
+
+            output_line = "{} - Request: {} - ip: {}\n {}, {}, {} - Org: {}\n".format(
+                result.group(2), result.group(3), result.group(1), resp['country'], resp['region'], resp['city'], resp['org'])
+
+            print(output_line)
+            return output_line
+
+        else:
+            print("error")
+            return "ERROR on line: {}".format(line)
+
+
+    return None 
+ 
+
 
 def main():
     print("starting...\n")
@@ -43,3 +55,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+
