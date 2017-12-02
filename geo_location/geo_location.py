@@ -1,9 +1,9 @@
 #! /usr/bin/python
 
 """
-Added this to chronjob
+Added this to cronjob
 
-sudo chrontab -e to modify/check
+sudo crontab -e to modify/check
 It will run every hour
 """
 
