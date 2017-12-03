@@ -19,45 +19,65 @@ timestamp_file_location = "/var/log/nginx/geo.timestamp"
 time_fmt = '%d/%b/%Y:%H:%M:%S'
 default_time = "01/Jan/1999:00:00:00"
 
+"""
+    Open and read through the nginx access log
+"""
 def watch_log(fn):
     fp = open(fn, 'r')
     last_time = get_time_stamp(timestamp_file_location)
-    print("last_time: {}".format(last_time))
     new_line = fp.readline()
     while new_line:
-        log_line = parse_line(new_line, last_time)
+        log_line, log_time = parse_line(new_line, last_time)
         if log_line:
-            write_log(destination_file_location, log_line)
+            write_log(destination_file_location, log_line, timestamp_file_location, log_time)
         new_line = fp.readline()
 
-    write_log(destination_file_location, '---------hourly cron job over----------')
+    write_log(destination_file_location, '---------hourly cron job over----------\n')
 
-def write_log(fn, line, fn_time, time):
+
+"""
+    Write to geo.log and update geo.timestamp if necessary
+"""
+def write_log(fn, line, fn_time = None, time = None):
     with open(fn, 'a') as log:
         log.write(line)
-    with open(fn_time, 'w') as time_log:
-        log.write(time)
 
+    if time and fn_time:
+        with open(fn_time, 'w') as time_log:
+            time_log.write(time)
+
+"""
+    Parse a given line from access.log. It will parse out date, request, ip address.
+    Get geolocation of the source ipaddress from ipinfo.io.
+    Only returns a formatted string along with time if log is later than last get.timestamp
+"""
 def parse_line(line, last_time):
     result = match_ok.match(line)
 
     if result:
         if len(result.groups()) == 3:
             if check_time(datetime.datetime.strptime(result.group(2), time_fmt), last_time):
-                print("pass")
+                resp = requests.get('https://ipinfo.io/{}'.format(result.group(1))).json()
+                output_line = "{} - Request: {} - ip: {}\n {}, {}, {} - Org: {}\n\n".format(
+                    result.group(2), result.group(3), result.group(1), resp['country'], resp['region'], resp['city'], resp['org'])
+                return output_line, result.group(2)
             else:
-                print("no pass")
-            resp = requests.get('https://ipinfo.io/{}'.format(result.group(1))).json()
-            output_line = "{} - Request: {} - ip: {}\n {}, {}, {} - Org: {}\n".format(
-                result.group(2), result.group(3), result.group(1), resp['country'], resp['region'], resp['city'], resp['org'])
-            return output_line
+                return None, None
         else:
-            return "ERROR on line: {}".format(line)
-    return None 
+            return "ERROR on line: {}".format(line), None
+    return None, None
 
+"""
+    Compares two datetime ojbect
+"""
 def check_time(curr_time, last_time):
     return True if curr_time > last_time else False
 
+
+"""
+    Read from geo.timestamp and get latest time of the log data.
+    Returns a datetime object containing the timestamp date
+"""
 def get_time_stamp(fn):
     with open(fn, 'a+') as timestamp:
         last_time = timestamp.readline()
@@ -69,7 +89,6 @@ def get_time_stamp(fn):
 
 def main():
     watch_log(source_file_location)
-
 
 
 if __name__ == '__main__':
