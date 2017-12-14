@@ -19,9 +19,6 @@ timestamp_file_location = "/var/log/nginx/geo.timestamp"
 time_fmt = '%d/%b/%Y:%H:%M:%S'
 default_time = "01/Jan/1999:00:00:00"
 
-"""
-    Open and read through the nginx access log
-"""
 def watch_log(fn):
     fp = open(fn, 'r')
     last_time = get_time_stamp(timestamp_file_location)
@@ -59,7 +56,8 @@ def parse_line(line, last_time):
             if check_time(datetime.datetime.strptime(result.group(2), time_fmt), last_time):
                 resp = requests.get('https://ipinfo.io/{}'.format(result.group(1))).json()
                 output_line = "{} - Request: {} - ip: {}\n {}, {}, {} - Org: {}\n\n".format(
-                    result.group(2), result.group(3), result.group(1), resp['country'], resp['region'], resp['city'], resp['org'])
+                    result.group(2), result.group(3), result.group(1), 
+                    convert_to_utf8(resp['country']), convert_to_utf8(resp['region']), convert_to_utf8(resp['city']), convert_to_utf8(resp['org']))
                 return output_line, result.group(2)
             else:
                 return None, None
@@ -72,6 +70,10 @@ def parse_line(line, last_time):
 """
 def check_time(curr_time, last_time):
     return True if curr_time > last_time else False
+
+
+def convert_to_utf8(word):
+    return u''.join(word).encode('utf-8').strip()
 
 
 """
