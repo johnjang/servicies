@@ -55,6 +55,8 @@ def parse_line(line, last_time):
         if len(result.groups()) == 3:
             if check_time(datetime.datetime.strptime(result.group(2), time_fmt), last_time):
                 resp = requests.get('https://ipinfo.io/{}'.format(result.group(1))).json()
+                if not 'country' in resp or not 'org' in resp:
+                    return None, None
                 output_line = "{} - Request: {} - ip: {}\n {}, {}, {} - Org: {}\n\n".format(
                     result.group(2), result.group(3), result.group(1), 
                     convert_to_utf8(resp['country']), convert_to_utf8(resp['region']), convert_to_utf8(resp['city']), convert_to_utf8(resp['org']))
